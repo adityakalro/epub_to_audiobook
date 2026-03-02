@@ -15,6 +15,12 @@ from audiobook_generator.tts_providers.openai_tts_provider import get_openai_sup
 from audiobook_generator.tts_providers.piper_tts_provider import get_piper_supported_languages, \
     get_piper_supported_voices, get_piper_supported_qualities, get_piper_supported_speakers
 from audiobook_generator.tts_providers.pocket_tts_provider import get_pocket_supported_voices
+from audiobook_generator.tts_providers.mlx_audio_tts_provider import (
+    get_mlx_default_model,
+    get_mlx_kokoro_voices,
+    get_mlx_lang_codes,
+    get_mlx_qwen3_voices,
+)
 from audiobook_generator.utils.log_handler import generate_unique_log_path
 from main import main
 
@@ -48,20 +54,22 @@ def get_piper_supported_speakers_gui(language, voice, quality):
     return gr.Dropdown(speakers_list, value=speakers_list[0], label="Speaker", interactive=True, info="Select the speaker")
 
 
-def process_ui_form(input_file, output_dir, worker_count, log_level, output_text, preview,
+def process_ui_form(input_file, output_dir, worker_count, log_level, output_text, preview, use_llm_optimization,
                     search_and_replace_file, title_mode, new_line_mode, chapter_start, chapter_end, remove_endnotes, remove_reference_numbers,
                     model, voices, speed, openai_output_format, instructions,
                     azure_language, azure_voice, azure_output_format, azure_break_duration,
                     edge_language, edge_voice, edge_output_format, proxy, edge_voice_rate, edge_volume, edge_pitch, edge_break_duration,
                     piper_executable_path, piper_docker_image, piper_language, piper_voice, piper_quality, piper_speaker,
                     piper_noise_scale, piper_noise_w_scale, piper_length_scale, piper_sentence_silence,
-                    pocket_voice, pocket_output_format):
+                    pocket_voice, pocket_output_format,
+                    mlx_model, mlx_voice, mlx_lang_code, mlx_speed, mlx_output_format):
 
     config = GeneralConfig(None)
     config.input_file = input_file.name if hasattr(input_file, 'name') else input_file
     config.output_folder = output_dir
     config.preview = preview
     config.output_text = output_text
+    config.use_llm_optimization = use_llm_optimization
     config.log = log_level
     config.worker_count = worker_count
     config.no_prompt = True
@@ -112,6 +120,13 @@ def process_ui_form(input_file, output_dir, worker_count, log_level, output_text
         config.tts = "pocket"
         config.pocket_voice = pocket_voice
         config.output_format = pocket_output_format
+    elif selected_tts == "MLX-Audio":
+        config.tts = "mlx_audio"
+        config.mlx_model = mlx_model
+        config.mlx_voice = mlx_voice
+        config.mlx_lang_code = mlx_lang_code
+        config.mlx_speed = mlx_speed
+        config.output_format = mlx_output_format
     else:
         raise ValueError("Unsupported TTS provider selected")
 
@@ -157,6 +172,8 @@ def host_ui(config):
                                       info="Export a plain text file for each chapter.")
                 preview = gr.Checkbox(label="Enable Preview Mode", value=False,
                                   info="It will not convert the to audio, only prepare chapters and cost. Recommended to toggle on when testing book parsing ***without*** audio generation.")
+                use_llm_optimization = gr.Checkbox(label="Use LLM optimization (Ollama)", value=False,
+                                  info="Run each chapter through a local LLM (Ollama) to improve punctuation and intonation for TTS. Requires Ollama; uses ollama_tts_config.json or defaults.")
 
         gr.Markdown("---")
         with gr.Row(equal_height=True):
@@ -314,6 +331,45 @@ def host_ui(config):
                         interactive=True,
                         info="Select output audio format"
                     )
+
+            with gr.Tab("MLX-Audio", id="mlx_audio_tab_id") as mlx_audio_tab:
+                gr.Markdown("**MLX-Audio** runs on Apple Silicon (M1/M2/M3/M4). Default: Qwen3-TTS. Use Kokoro-82M-bf16 for Kokoro.")
+                mlx_audio_tab.select(on_tab_change, inputs=None, outputs=None)
+                with gr.Row(equal_height=True):
+                    mlx_model = gr.Textbox(
+                        label="Model",
+                        value=get_mlx_default_model(),
+                        interactive=True,
+                        info="e.g. Qwen3-TTS-12Hz-0.6B-Base-bf16 or Kokoro-82M-bf16"
+                    )
+                    mlx_voice = gr.Dropdown(
+                        get_mlx_qwen3_voices(),
+                        label="Voice",
+                        value="Chelsie",
+                        interactive=True,
+                        info="Qwen3: Chelsie, Drew, ...; Kokoro: af_heart, bf_alice, ..."
+                    )
+                    mlx_lang_code = gr.Dropdown(
+                        choices=[c[0] for c in get_mlx_lang_codes()],
+                        label="Language",
+                        value="a",
+                        interactive=True,
+                        info="a=American EN, b=British EN, j=JA, z=ZH, e=ES, f=FR"
+                    )
+                    mlx_speed = gr.Slider(
+                        minimum=0.5,
+                        maximum=2.0,
+                        step=0.1,
+                        label="Speed",
+                        value=1.0,
+                        interactive=True
+                    )
+                    mlx_output_format = gr.Dropdown(
+                        ["mp3", "wav", "opus", "flac"],
+                        label="Output Format",
+                        value="mp3",
+                        interactive=True
+                    )
         gr.Markdown("---")
         with gr.Row(equal_height=True):
             gr.Button("Stop").click(
@@ -323,14 +379,15 @@ def host_ui(config):
             gr.Button("Start", variant="primary").click(
                 fn=process_ui_form,
                 inputs=[
-                    input_file, output_dir, worker_count, log_level, output_text, preview,
+                    input_file, output_dir, worker_count, log_level, output_text, preview, use_llm_optimization,
                     search_and_replace_file, title_mode, new_line_mode, chapter_start, chapter_end, remove_endnotes, remove_reference_numbers,
                     model, voices, speed, openai_output_format, instructions,
                     azure_language, azure_voice, azure_output_format, azure_break_duration,
                     edge_language, edge_voice, edge_output_format, proxy, edge_voice_rate, edge_volume, edge_pitch, edge_break_duration,
                     piper_executable_path, piper_docker_image, piper_language, piper_voice, piper_quality, piper_speaker,
                     piper_noise_scale, piper_noise_w_scale, piper_length_scale, piper_sentence_silence,
-                    pocket_voice, pocket_output_format
+                    pocket_voice, pocket_output_format,
+                    mlx_model, mlx_voice, mlx_lang_code, mlx_speed, mlx_output_format
                 ],
                 outputs=None)
         with gr.Row():

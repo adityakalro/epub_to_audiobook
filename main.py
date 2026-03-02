@@ -7,6 +7,7 @@ from audiobook_generator.tts_providers.base_tts_provider import (
     get_supported_tts_providers,
 )
 from audiobook_generator.utils.log_handler import setup_logging, generate_unique_log_path
+from audiobook_generator.utils.llm_tts_optimizer import load_ollama_config
 
 
 def handle_args():
@@ -175,6 +176,11 @@ def handle_args():
         default="1250",
         help="Break duration in milliseconds for the different paragraphs or sections (default: 1250, means 1.25 s). Valid values range from 0 to 5000 milliseconds for Azure TTS.",
     )
+    azure_edge_tts_group.add_argument(
+        "--add_sentence_pauses",
+        action="store_true",
+        help="Insert pause markers after every sentence so Azure/Edge TTS add a break at sentence end (duration from --break_duration). Other providers may ignore.",
+    )
 
     piper_tts_group = parser.add_argument_group(title="piper specific")
     piper_tts_group.add_argument(
@@ -210,7 +216,68 @@ def handle_args():
         help="Voice name for Pocket-TTS. Built-in voices: alba, marius, javert, jean, fantine, cosette, eponine, azelma. Can also be a path to a custom .wav file for voice cloning (default: alba)",
     )
 
+    mlx_audio_tts_group = parser.add_argument_group(title="mlx-audio specific")
+    mlx_audio_tts_group.add_argument(
+        "--mlx_model",
+        default="mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16",
+        help="MLX-Audio TTS model (default: Qwen3-TTS-0.6B). Use Kokoro-82M-bf16 for Kokoro. Apple Silicon only.",
+    )
+    mlx_audio_tts_group.add_argument(
+        "--mlx_voice",
+        default="Chelsie",
+        help="Voice (Qwen3: Chelsie, Drew, Emily, ...; Kokoro: af_heart, bf_alice, ...). Default: Chelsie",
+    )
+    mlx_audio_tts_group.add_argument(
+        "--mlx_lang_code",
+        default="a",
+        help="Language code: a=American EN, b=British EN, j=Japanese, z=Chinese, e=Spanish, f=French (default: a)",
+    )
+    mlx_audio_tts_group.add_argument(
+        "--mlx_speed",
+        default=1.0,
+        type=float,
+        help="Speech speed (default: 1.0)",
+    )
+
+    llm_opt_group = parser.add_argument_group(title="LLM TTS optimization")
+    llm_opt_group.add_argument(
+        "--use_llm_optimization",
+        action="store_true",
+        help="Run each chapter text through a local LLM (Ollama) to optimize punctuation and intonation for TTS. Long chapters are split at paragraph/sentence boundaries.",
+    )
+    llm_opt_group.add_argument(
+        "--ollama_config",
+        default=None,
+        help="Path to ollama_tts_config.json. If not set, uses ./ollama_tts_config.json if present.",
+    )
+    llm_opt_group.add_argument(
+        "--ollama_url",
+        default=None,
+        help="Ollama API URL (overrides config file).",
+    )
+    llm_opt_group.add_argument(
+        "--ollama_model",
+        default=None,
+        help="Ollama model name (overrides config file).",
+    )
+    llm_opt_group.add_argument(
+        "--ollama_max_chars",
+        default=None,
+        type=int,
+        help="Max characters per chunk when splitting chapters (overrides config file). Default 4000. Splits at paragraph or sentence boundaries.",
+    )
+
     args = parser.parse_args()
+
+    if getattr(args, "use_llm_optimization", False):
+        cfg = load_ollama_config(getattr(args, "ollama_config", None))
+        if not getattr(args, "ollama_url", None):
+            args.ollama_url = cfg["ollama_url"]
+        if not getattr(args, "ollama_model", None):
+            args.ollama_model = cfg["ollama_model"]
+        if getattr(args, "ollama_max_chars", None) is None:
+            args.ollama_max_chars = cfg.get("ollama_max_chars", 4000)
+
     return GeneralConfig(args)
 
 

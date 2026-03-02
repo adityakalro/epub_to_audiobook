@@ -8,6 +8,11 @@ from audiobook_generator.core.audio_tags import AudioTags
 from audiobook_generator.tts_providers.base_tts_provider import get_tts_provider
 from audiobook_generator.utils.log_handler import setup_logging
 from audiobook_generator.utils.filename_sanitizer import make_safe_filename
+from audiobook_generator.utils.utils import insert_breaks_after_sentences
+from audiobook_generator.utils.llm_tts_optimizer import (
+    load_ollama_config,
+    optimize_chapter_for_tts,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +43,33 @@ class AudiobookGenerator:
         """Process a single chapter: write text (if needed) and convert to audio."""
         try:
             logger.info(f"Processing chapter {idx}: {title}")
+
+            if self.config.use_llm_optimization:
+                url = self.config.ollama_url
+                model = self.config.ollama_model
+                max_chars = self.config.ollama_max_chars
+                if url is None or model is None or max_chars is None:
+                    cfg = load_ollama_config(self.config.ollama_config)
+                    url = url or cfg["ollama_url"]
+                    model = model or cfg["ollama_model"]
+                    max_chars = max_chars if max_chars is not None else cfg.get("ollama_max_chars", 4000)
+                text = optimize_chapter_for_tts(
+                    text, url, model, self.config.language, max_chars
+                )
+                # Write LLM-optimized chapter to markdown in output_folder/md
+                md_dir = os.path.join(self.config.output_folder, "md")
+                os.makedirs(md_dir, exist_ok=True)
+                safe_md_name = make_safe_filename(
+                    title=title,
+                    idx=idx,
+                    output_dir=md_dir,
+                    ext=".md",
+                    collision_check=False,
+                )
+                md_file = os.path.join(md_dir, safe_md_name)
+                with open(md_file, "w", encoding="utf-8") as f:
+                    f.write(text)
+
             tts_provider = get_tts_provider(self.config)
 
             # Save chapter text if required
@@ -71,6 +103,11 @@ class AudiobookGenerator:
             audio_tags = AudioTags(
                 title, book_parser.get_book_author(), book_parser.get_book_title(), idx
             )
+            if self.config.add_sentence_pauses:
+                lang = self.config.language or "en-US"
+                text = insert_breaks_after_sentences(
+                    text, tts_provider.get_break_string().strip(), lang
+                )
             tts_provider.text_to_speech(text, output_file, audio_tags)
 
             logger.info(f"✅ Converted chapter {idx}: {title}, output file: {output_file}")

@@ -13,6 +13,30 @@ import os
 logger = logging.getLogger(__name__)
 
 
+def insert_breaks_after_sentences(text: str, break_string: str, language: str) -> str:
+    """
+    Insert break_string after every sentence so TTS providers (e.g. Azure, Edge)
+    can insert pauses at sentence boundaries.
+
+    Args:
+        text: Chapter or chunk text
+        break_string: String to insert after each sentence (e.g. " @BRK#")
+        language: Language code for sentence segmentation (e.g. "en-US")
+
+    Returns:
+        Text with break_string inserted after each sentence
+    """
+    if not text or not break_string:
+        return text
+    try:
+        sentences = list(segment(language, text))
+    except Exception:
+        return text
+    if not sentences:
+        return text
+    return " ".join(s.strip() + break_string for s in sentences if s.strip()).strip()
+
+
 def split_text(text: str, max_chars: int, language: str) -> List[str]:
     """
     Split text into chunks, where each chunk is as close to max_chars as possible.

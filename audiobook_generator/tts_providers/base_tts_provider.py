@@ -7,6 +7,7 @@ TTS_OPENAI = "openai"
 TTS_EDGE = "edge"
 TTS_PIPER = "piper"
 TTS_POCKET = "pocket"
+TTS_MLX_AUDIO = "mlx_audio"
 
 
 class BaseTTSProvider:  # Base interface for TTS providers
@@ -36,7 +37,7 @@ class BaseTTSProvider:  # Base interface for TTS providers
 
 # Common support methods for all TTS providers
 def get_supported_tts_providers() -> List[str]:
-    return [TTS_AZURE, TTS_OPENAI, TTS_EDGE, TTS_PIPER, TTS_POCKET]
+    return [TTS_AZURE, TTS_OPENAI, TTS_EDGE, TTS_PIPER, TTS_POCKET, TTS_MLX_AUDIO]
 
 
 def get_tts_provider(config) -> BaseTTSProvider:
@@ -64,5 +65,9 @@ def get_tts_provider(config) -> BaseTTSProvider:
         from audiobook_generator.tts_providers.pocket_tts_provider import PocketTTSProvider
 
         return PocketTTSProvider(config)
+    elif config.tts == TTS_MLX_AUDIO:
+        from audiobook_generator.tts_providers.mlx_audio_tts_provider import MLXAudioTTSProvider
+
+        return MLXAudioTTSProvider(config)
     else:
         raise ValueError(f"Invalid TTS provider: {config.tts}")

@@ -33,6 +33,7 @@ class GeneralConfig:
 
         # TTS provider: Azure & Edge TTS specific arguments
         self.break_duration = getattr(args, 'break_duration', None)
+        self.add_sentence_pauses = getattr(args, 'add_sentence_pauses', None)
 
         # TTS provider: Edge specific arguments
         self.voice_rate = getattr(args, 'voice_rate', None)
@@ -51,6 +52,19 @@ class GeneralConfig:
 
         # TTS provider: Pocket-TTS specific arguments
         self.pocket_voice = getattr(args, 'pocket_voice', None)
+
+        # TTS provider: MLX-Audio specific arguments
+        self.mlx_model = getattr(args, 'mlx_model', None)
+        self.mlx_voice = getattr(args, 'mlx_voice', None)
+        self.mlx_lang_code = getattr(args, 'mlx_lang_code', None)
+        self.mlx_speed = getattr(args, 'mlx_speed', None)
+
+        # LLM TTS optimization (Ollama)
+        self.use_llm_optimization = getattr(args, 'use_llm_optimization', None)
+        self.ollama_config = getattr(args, 'ollama_config', None)
+        self.ollama_url = getattr(args, 'ollama_url', None)
+        self.ollama_model = getattr(args, 'ollama_model', None)
+        self.ollama_max_chars = getattr(args, 'ollama_max_chars', None)
 
     def __str__(self):
         return ",\n".join(f"{key}={value}" for key, value in self.__dict__.items())
