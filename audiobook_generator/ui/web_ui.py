@@ -14,6 +14,7 @@ from audiobook_generator.tts_providers.openai_tts_provider import get_openai_sup
     get_openai_supported_voices, get_openai_instructions_example, get_openai_supported_output_formats
 from audiobook_generator.tts_providers.piper_tts_provider import get_piper_supported_languages, \
     get_piper_supported_voices, get_piper_supported_qualities, get_piper_supported_speakers
+from audiobook_generator.tts_providers.voxtral_tts_provider import get_voxtral_supported_voices
 from audiobook_generator.utils.log_handler import generate_unique_log_path
 from main import main
 
@@ -53,7 +54,8 @@ def process_ui_form(input_file, output_dir, worker_count, log_level, output_text
                     azure_language, azure_voice, azure_output_format, azure_break_duration,
                     edge_language, edge_voice, edge_output_format, proxy, edge_voice_rate, edge_volume, edge_pitch, edge_break_duration,
                     piper_executable_path, piper_docker_image, piper_language, piper_voice, piper_quality, piper_speaker,
-                    piper_noise_scale, piper_noise_w_scale, piper_length_scale, piper_sentence_silence):
+                    piper_noise_scale, piper_noise_w_scale, piper_length_scale, piper_sentence_silence,
+                    voxtral_voice):
 
     config = GeneralConfig(None)
     config.input_file = input_file.name if hasattr(input_file, 'name') else input_file
@@ -106,6 +108,9 @@ def process_ui_form(input_file, output_dir, worker_count, log_level, output_text
         config.piper_noise_w_scale = piper_noise_w_scale
         config.piper_length_scale = piper_length_scale
         config.piper_sentence_silence = piper_sentence_silence
+    elif selected_tts == "Voxtral":
+        config.tts = "voxtral"
+        config.voice_name = voxtral_voice
     else:
         raise ValueError("Unsupported TTS provider selected")
 
@@ -228,6 +233,13 @@ def host_ui(config):
                     )
                 edge_tab.select(on_tab_change, inputs=None, outputs=None)
 
+            with gr.Tab("Voxtral", id="voxtral_tab_id") as voxtral_tab:
+                gr.Markdown("Local TTS using [Voxtral-4B](https://huggingface.co/mlx-community/Voxtral-4B-TTS-2603-mlx-bf16) via mlx-audio. No API key required. Requires Apple Silicon Mac with ~8 GB VRAM.")
+                with gr.Row(equal_height=True):
+                    voxtral_voice = gr.Dropdown(get_voxtral_supported_voices(), value="neutral_male", label="Voice",
+                                                interactive=True, info="Select the voice")
+                voxtral_tab.select(on_tab_change, inputs=None, outputs=None)
+
             with gr.Tab("Piper", id="piper_tab_id") as piper_tab:
                 piper_tab.select(on_tab_change, inputs=None, outputs=None)
                 with gr.Row(equal_height=True):
@@ -303,7 +315,8 @@ def host_ui(config):
                     azure_language, azure_voice, azure_output_format, azure_break_duration,
                     edge_language, edge_voice, edge_output_format, proxy, edge_voice_rate, edge_volume, edge_pitch, edge_break_duration,
                     piper_executable_path, piper_docker_image, piper_language, piper_voice, piper_quality, piper_speaker,
-                    piper_noise_scale, piper_noise_w_scale, piper_length_scale, piper_sentence_silence
+                    piper_noise_scale, piper_noise_w_scale, piper_length_scale, piper_sentence_silence,
+                    voxtral_voice
                 ],
                 outputs=None)
         with gr.Row():
