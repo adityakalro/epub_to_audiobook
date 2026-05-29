@@ -44,6 +44,53 @@ def get_voxtral_config():
     return GeneralConfig(args)
 
 
+def get_vibevoice_config(ref_audio=None, model="q4_k_m", cfg_pace=1.3):
+    args = MagicMock(
+        input_file='examples/The_Life_and_Adventures_of_Robinson_Crusoe.epub',
+        output_folder='output',
+        preview=False,
+        output_text=False,
+        log='INFO',
+        newline_mode='double',
+        chapter_start=1,
+        chapter_end=-1,
+        remove_endnotes=False,
+        tts='vibevoice',
+        language='en-US',
+        vibevoice_ref_audio=ref_audio,
+        vibevoice_model=model,
+        vibevoice_cfg_pace=cfg_pace,
+    )
+    return GeneralConfig(args)
+
+
+def get_f5_config():
+    args = MagicMock(
+        input_file='examples/The_Life_and_Adventures_of_Robinson_Crusoe.epub',
+        output_folder='output',
+        preview=False,
+        output_text=False,
+        log='INFO',
+        newline_mode='double',
+        chapter_start=1,
+        chapter_end=-1,
+        remove_endnotes=False,
+        tts='f5',
+        language='en-US',
+        voice_name='',
+        output_format='wav',
+        model_name='lucasnewman/f5-tts-mlx',
+        f5_ref_audio=None,
+        f5_ref_text=None,
+        f5_steps=8,
+        f5_method='rk4',
+        f5_cfg_strength=2.0,
+        f5_speed=1.0,
+        f5_quantization_bits=None,
+    )
+    return GeneralConfig(args)
+
+
 def get_openai_config():
     args = MagicMock(
         input_file='examples/The_Life_and_Adventures_of_Robinson_Crusoe.epub',

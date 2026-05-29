@@ -203,6 +203,75 @@ def handle_args():
         help="Phoneme length, a.k.a. speaking rate",
     )
 
+    from audiobook_generator.tts_providers.vibevoice_tts_provider import (
+        get_vibevoice_supported_models, VIBEVOICE_DEFAULT_MODEL, VIBEVOICE_DEFAULT_CFG_PACE,
+    )
+    vibevoice_tts_group = parser.add_argument_group(title="vibevoice specific")
+    vibevoice_tts_group.add_argument(
+        "--vibevoice_ref_audio",
+        help="Path to a reference WAV file for VibeVoice voice cloning.",
+    )
+    vibevoice_tts_group.add_argument(
+        "--vibevoice_model",
+        choices=get_vibevoice_supported_models(),
+        default=VIBEVOICE_DEFAULT_MODEL,
+        help=f"4-bit quantized GGUF model variant (default: {VIBEVOICE_DEFAULT_MODEL}). "
+             "Options: q4_k_m (balanced), iq4_nl (neural, recommended), q4_0 (fast), "
+             "iq4_xs (smallest), q4_1 (slightly higher quality than q4_0).",
+    )
+    vibevoice_tts_group.add_argument(
+        "--vibevoice_cfg_pace",
+        default=VIBEVOICE_DEFAULT_CFG_PACE,
+        type=float,
+        help=f"CFG pace / guidance scale for generation (default: {VIBEVOICE_DEFAULT_CFG_PACE}).",
+    )
+
+    from audiobook_generator.tts_providers.f5_tts_provider import (
+        F5_DEFAULT_MODEL, F5_DEFAULT_STEPS, F5_DEFAULT_METHOD,
+        F5_DEFAULT_CFG_STRENGTH, F5_DEFAULT_SPEED, get_f5_supported_methods,
+    )
+    f5_tts_group = parser.add_argument_group(title="f5 specific")
+    f5_tts_group.add_argument(
+        "--f5_ref_audio",
+        help="Path to a reference WAV file (mono, 24kHz) for voice cloning. "
+             "If not provided, a default reference voice is used.",
+    )
+    f5_tts_group.add_argument(
+        "--f5_ref_text",
+        help="Text spoken in the reference audio. Required if --f5_ref_audio is provided.",
+    )
+    f5_tts_group.add_argument(
+        "--f5_steps",
+        default=F5_DEFAULT_STEPS,
+        type=int,
+        help=f"Number of ODE sampling steps (default: {F5_DEFAULT_STEPS}).",
+    )
+    f5_tts_group.add_argument(
+        "--f5_method",
+        choices=get_f5_supported_methods(),
+        default=F5_DEFAULT_METHOD,
+        help=f"ODE solver method (default: {F5_DEFAULT_METHOD}). Options: euler, midpoint, rk4.",
+    )
+    f5_tts_group.add_argument(
+        "--f5_cfg_strength",
+        default=F5_DEFAULT_CFG_STRENGTH,
+        type=float,
+        help=f"Classifier-free guidance strength (default: {F5_DEFAULT_CFG_STRENGTH}). "
+             "Higher values make output more faithful to reference voice.",
+    )
+    f5_tts_group.add_argument(
+        "--f5_speed",
+        default=F5_DEFAULT_SPEED,
+        type=float,
+        help=f"Speed factor for generation (default: {F5_DEFAULT_SPEED}).",
+    )
+    f5_tts_group.add_argument(
+        "--f5_quantization_bits",
+        type=int,
+        choices=[4, 8],
+        help="Quantization bits for model loading (4 or 8). Reduces memory usage.",
+    )
+
     args = parser.parse_args()
     return GeneralConfig(args)
 

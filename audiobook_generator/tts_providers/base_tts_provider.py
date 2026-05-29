@@ -7,6 +7,8 @@ TTS_OPENAI = "openai"
 TTS_EDGE = "edge"
 TTS_PIPER = "piper"
 TTS_VOXTRAL = "voxtral"
+TTS_VIBEVOICE = "vibevoice"
+TTS_F5 = "f5"
 
 
 class BaseTTSProvider:  # Base interface for TTS providers
@@ -36,7 +38,7 @@ class BaseTTSProvider:  # Base interface for TTS providers
 
 # Common support methods for all TTS providers
 def get_supported_tts_providers() -> List[str]:
-    return [TTS_AZURE, TTS_OPENAI, TTS_EDGE, TTS_PIPER, TTS_VOXTRAL]
+    return [TTS_AZURE, TTS_OPENAI, TTS_EDGE, TTS_PIPER, TTS_VOXTRAL, TTS_VIBEVOICE, TTS_F5]
 
 
 def get_tts_provider(config) -> BaseTTSProvider:
@@ -64,5 +66,13 @@ def get_tts_provider(config) -> BaseTTSProvider:
         from audiobook_generator.tts_providers.voxtral_tts_provider import VoxtralTTSProvider
 
         return VoxtralTTSProvider(config)
+    elif config.tts == TTS_VIBEVOICE:
+        from audiobook_generator.tts_providers.vibevoice_tts_provider import VibeVoiceTTSProvider
+
+        return VibeVoiceTTSProvider(config)
+    elif config.tts == TTS_F5:
+        from audiobook_generator.tts_providers.f5_tts_provider import F5TTSProvider
+
+        return F5TTSProvider(config)
     else:
         raise ValueError(f"Invalid TTS provider: {config.tts}")

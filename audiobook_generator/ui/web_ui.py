@@ -15,6 +15,13 @@ from audiobook_generator.tts_providers.openai_tts_provider import get_openai_sup
 from audiobook_generator.tts_providers.piper_tts_provider import get_piper_supported_languages, \
     get_piper_supported_voices, get_piper_supported_qualities, get_piper_supported_speakers
 from audiobook_generator.tts_providers.voxtral_tts_provider import get_voxtral_supported_voices
+from audiobook_generator.tts_providers.vibevoice_tts_provider import (
+    get_vibevoice_supported_models, VIBEVOICE_DEFAULT_MODEL, VIBEVOICE_DEFAULT_CFG_PACE,
+)
+from audiobook_generator.tts_providers.f5_tts_provider import (
+    get_f5_supported_models, get_f5_supported_methods,
+    F5_DEFAULT_STEPS, F5_DEFAULT_METHOD, F5_DEFAULT_CFG_STRENGTH, F5_DEFAULT_SPEED,
+)
 from audiobook_generator.utils.log_handler import generate_unique_log_path
 from main import main
 
@@ -55,7 +62,10 @@ def process_ui_form(input_file, output_dir, worker_count, log_level, output_text
                     edge_language, edge_voice, edge_output_format, proxy, edge_voice_rate, edge_volume, edge_pitch, edge_break_duration,
                     piper_executable_path, piper_docker_image, piper_language, piper_voice, piper_quality, piper_speaker,
                     piper_noise_scale, piper_noise_w_scale, piper_length_scale, piper_sentence_silence,
-                    voxtral_voice):
+                    voxtral_voice,
+                    vibevoice_ref_audio, vibevoice_model, vibevoice_cfg_pace,
+                    f5_model_name, f5_ref_audio, f5_ref_text, f5_steps, f5_method,
+                    f5_cfg_strength, f5_speed, f5_quantization_bits):
 
     config = GeneralConfig(None)
     config.input_file = input_file.name if hasattr(input_file, 'name') else input_file
@@ -111,6 +121,21 @@ def process_ui_form(input_file, output_dir, worker_count, log_level, output_text
     elif selected_tts == "Voxtral":
         config.tts = "voxtral"
         config.voice_name = voxtral_voice
+    elif selected_tts == "VibeVoice":
+        config.tts = "vibevoice"
+        config.vibevoice_ref_audio = vibevoice_ref_audio.name if hasattr(vibevoice_ref_audio, 'name') else vibevoice_ref_audio
+        config.vibevoice_model = vibevoice_model
+        config.vibevoice_cfg_pace = vibevoice_cfg_pace
+    elif selected_tts == "F5":
+        config.tts = "f5"
+        config.model_name = f5_model_name
+        config.f5_ref_audio = f5_ref_audio.name if hasattr(f5_ref_audio, 'name') else f5_ref_audio
+        config.f5_ref_text = f5_ref_text
+        config.f5_steps = f5_steps
+        config.f5_method = f5_method
+        config.f5_cfg_strength = f5_cfg_strength
+        config.f5_speed = f5_speed
+        config.f5_quantization_bits = f5_quantization_bits
     else:
         raise ValueError("Unsupported TTS provider selected")
 
@@ -240,6 +265,59 @@ def host_ui(config):
                                                 interactive=True, info="Select the voice")
                 voxtral_tab.select(on_tab_change, inputs=None, outputs=None)
 
+            with gr.Tab("F5", id="f5_tab_id") as f5_tab:
+                gr.Markdown("Local TTS using [F5-TTS](https://github.com/lucasnewman/f5-tts-mlx) via MLX. "
+                            "Zero-shot voice cloning from a short reference audio clip. "
+                            "No API key required. Requires Apple Silicon Mac.")
+                with gr.Row(equal_height=True):
+                    f5_model_name = gr.Dropdown(get_f5_supported_models(), value="lucasnewman/f5-tts-mlx",
+                                                label="Model", interactive=True, allow_custom_value=True,
+                                                info="HF model ID for F5-TTS")
+                    f5_ref_audio = gr.File(label="Reference Audio (WAV, mono 24kHz)", file_types=[".wav"],
+                                           file_count="single", interactive=True,
+                                           info="Short WAV clip (5-10s) of the target voice. "
+                                                "Leave empty to use built-in default voice.")
+                    f5_ref_text = gr.Textbox(label="Reference Text", placeholder="Text spoken in the reference audio",
+                                             interactive=True,
+                                             info="Required if reference audio is provided.")
+                with gr.Row(equal_height=True):
+                    f5_steps = gr.Slider(minimum=1, maximum=32, step=1, label="ODE Steps",
+                                         value=F5_DEFAULT_STEPS, interactive=True,
+                                         info="Number of ODE sampling steps (default: 8). More = higher quality but slower.")
+                    f5_method = gr.Dropdown(get_f5_supported_methods(), value=F5_DEFAULT_METHOD,
+                                            label="ODE Solver", interactive=True,
+                                            info="euler (fast), midpoint, or rk4 (best quality, default)")
+                    f5_cfg_strength = gr.Slider(minimum=1.0, maximum=5.0, step=0.1, label="CFG Strength",
+                                                value=F5_DEFAULT_CFG_STRENGTH, interactive=True,
+                                                info="Classifier-free guidance. Higher = more faithful to reference voice.")
+                    f5_speed = gr.Slider(minimum=0.5, maximum=2.0, step=0.1, label="Speed",
+                                         value=F5_DEFAULT_SPEED, interactive=True,
+                                         info="Speed factor for generation.")
+                    f5_quantization_bits = gr.Dropdown([4, 8], label="Quantization", interactive=True,
+                                                       info="Quantize model to reduce memory. Leave empty for full precision.")
+                f5_tab.select(on_tab_change, inputs=None, outputs=None)
+
+            with gr.Tab("VibeVoice", id="vibevoice_tab_id") as vibevoice_tab:
+                gr.Markdown("Local TTS using [VibeVoice](https://huggingface.co/gguf-org/vibevoice-gguf) 4-bit GGUF. No API key required. Requires a reference WAV file for voice cloning.")
+                with gr.Row(equal_height=True):
+                    vibevoice_ref_audio = gr.File(label="Reference Audio (WAV)", file_types=[".wav"],
+                                                  file_count="single", interactive=True,
+                                                  info="Short WAV clip of the target voice for cloning")
+                    vibevoice_model = gr.Dropdown(
+                        get_vibevoice_supported_models(),
+                        value=VIBEVOICE_DEFAULT_MODEL,
+                        label="Model Variant",
+                        interactive=True,
+                        info="4-bit quantized GGUF variant. iq4_nl is recommended; q4_k_m is the balanced default.",
+                    )
+                    vibevoice_cfg_pace = gr.Slider(
+                        minimum=0.5, maximum=3.0, step=0.1,
+                        value=VIBEVOICE_DEFAULT_CFG_PACE,
+                        label="CFG Pace",
+                        info="Guidance scale for generation. Higher = more faithful to reference voice.",
+                    )
+                vibevoice_tab.select(on_tab_change, inputs=None, outputs=None)
+
             with gr.Tab("Piper", id="piper_tab_id") as piper_tab:
                 piper_tab.select(on_tab_change, inputs=None, outputs=None)
                 with gr.Row(equal_height=True):
@@ -316,7 +394,10 @@ def host_ui(config):
                     edge_language, edge_voice, edge_output_format, proxy, edge_voice_rate, edge_volume, edge_pitch, edge_break_duration,
                     piper_executable_path, piper_docker_image, piper_language, piper_voice, piper_quality, piper_speaker,
                     piper_noise_scale, piper_noise_w_scale, piper_length_scale, piper_sentence_silence,
-                    voxtral_voice
+                    voxtral_voice,
+                    vibevoice_ref_audio, vibevoice_model, vibevoice_cfg_pace,
+                    f5_model_name, f5_ref_audio, f5_ref_text, f5_steps, f5_method,
+                    f5_cfg_strength, f5_speed, f5_quantization_bits
                 ],
                 outputs=None)
         with gr.Row():

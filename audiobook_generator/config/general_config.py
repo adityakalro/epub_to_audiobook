@@ -49,5 +49,19 @@ class GeneralConfig:
         self.piper_length_scale = getattr(args, 'piper_length_scale', None)
         self.piper_sentence_silence = getattr(args, 'piper_sentence_silence', None)
 
+        # TTS provider: VibeVoice specific arguments
+        self.vibevoice_ref_audio = getattr(args, 'vibevoice_ref_audio', None)
+        self.vibevoice_cfg_pace = getattr(args, 'vibevoice_cfg_pace', None)
+        self.vibevoice_model = getattr(args, 'vibevoice_model', None)
+
+        # TTS provider: F5 specific arguments
+        self.f5_ref_audio = getattr(args, 'f5_ref_audio', None)
+        self.f5_ref_text = getattr(args, 'f5_ref_text', None)
+        self.f5_steps = getattr(args, 'f5_steps', None)
+        self.f5_method = getattr(args, 'f5_method', None)
+        self.f5_cfg_strength = getattr(args, 'f5_cfg_strength', None)
+        self.f5_speed = getattr(args, 'f5_speed', None)
+        self.f5_quantization_bits = getattr(args, 'f5_quantization_bits', None)
+
     def __str__(self):
         return ",\n".join(f"{key}={value}" for key, value in self.__dict__.items())
