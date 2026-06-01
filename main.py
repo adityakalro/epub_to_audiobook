@@ -278,6 +278,13 @@ def handle_args():
         help="Quantization bits for model loading (4 or 8). Reduces memory usage.",
     )
 
+    chatterbox_tts_group = parser.add_argument_group(title="chatterbox specific")
+    chatterbox_tts_group.add_argument(
+        "--chatterbox_ref_audio",
+        help="Path to a reference WAV file for voice cloning. "
+             "If not provided, the model uses its default voice.",
+    )
+
     args = parser.parse_args()
     return GeneralConfig(args)
 

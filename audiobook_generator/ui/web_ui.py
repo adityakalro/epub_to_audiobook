@@ -65,7 +65,8 @@ def process_ui_form(input_file, output_dir, worker_count, log_level, output_text
                     voxtral_voice,
                     vibevoice_ref_audio, vibevoice_model, vibevoice_cfg_pace,
                     f5_model_name, f5_ref_audio, f5_ref_text, f5_steps, f5_method,
-                    f5_cfg_strength, f5_speed, f5_quantization_bits):
+                    f5_cfg_strength, f5_speed, f5_quantization_bits,
+                    chatterbox_ref_audio):
 
     config = GeneralConfig(None)
     config.input_file = input_file.name if hasattr(input_file, 'name') else input_file
@@ -136,6 +137,9 @@ def process_ui_form(input_file, output_dir, worker_count, log_level, output_text
         config.f5_cfg_strength = f5_cfg_strength
         config.f5_speed = f5_speed
         config.f5_quantization_bits = f5_quantization_bits
+    elif selected_tts == "Chatterbox":
+        config.tts = "chatterbox"
+        config.chatterbox_ref_audio = chatterbox_ref_audio.name if hasattr(chatterbox_ref_audio, 'name') else chatterbox_ref_audio
     else:
         raise ValueError("Unsupported TTS provider selected")
 
@@ -297,6 +301,17 @@ def host_ui(config):
                                                        info="Quantize model to reduce memory. Leave empty for full precision.")
                 f5_tab.select(on_tab_change, inputs=None, outputs=None)
 
+            with gr.Tab("Chatterbox", id="chatterbox_tab_id") as chatterbox_tab:
+                gr.Markdown("Local TTS using [Chatterbox Turbo](https://huggingface.co/Jimmi42/chatterbox-turbo-apple-silicon) via MLX on Apple Silicon. "
+                            "Supports emotion tags like `[laugh]`, `[sigh]`, `[chuckle]`, and voice cloning. "
+                            "No API key required.")
+                with gr.Row(equal_height=True):
+                    chatterbox_ref_audio = gr.File(label="Reference Audio (WAV, optional)", file_types=[".wav"],
+                                                   file_count="single", interactive=True,
+                                                   info="Short WAV clip (6+ seconds) for voice cloning. "
+                                                        "Leave empty to use default voice.")
+                chatterbox_tab.select(on_tab_change, inputs=None, outputs=None)
+
             with gr.Tab("VibeVoice", id="vibevoice_tab_id") as vibevoice_tab:
                 gr.Markdown("Local TTS using [VibeVoice](https://huggingface.co/gguf-org/vibevoice-gguf) 4-bit GGUF. No API key required. Requires a reference WAV file for voice cloning.")
                 with gr.Row(equal_height=True):
@@ -397,7 +412,8 @@ def host_ui(config):
                     voxtral_voice,
                     vibevoice_ref_audio, vibevoice_model, vibevoice_cfg_pace,
                     f5_model_name, f5_ref_audio, f5_ref_text, f5_steps, f5_method,
-                    f5_cfg_strength, f5_speed, f5_quantization_bits
+                    f5_cfg_strength, f5_speed, f5_quantization_bits,
+                    chatterbox_ref_audio
                 ],
                 outputs=None)
         with gr.Row():

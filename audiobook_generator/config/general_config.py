@@ -64,5 +64,8 @@ class GeneralConfig:
         self.f5_speed = getattr(args, 'f5_speed', None)
         self.f5_quantization_bits = getattr(args, 'f5_quantization_bits', None)
 
+        # TTS provider: Chatterbox specific arguments
+        self.chatterbox_ref_audio = getattr(args, 'chatterbox_ref_audio', None)
+
     def __str__(self):
         return ",\n".join(f"{key}={value}" for key, value in self.__dict__.items())

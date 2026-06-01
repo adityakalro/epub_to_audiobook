@@ -1,5 +1,8 @@
 import io
 import logging
+import os
+import subprocess
+import tempfile
 import wave
 
 from audiobook_generator.core.audio_tags import AudioTags
@@ -134,19 +137,32 @@ class F5TTSProvider(BaseTTSProvider):
         audio = np.concatenate(all_audio)
         audio_int16 = (audio * 32767).clip(-32768, 32767).astype(np.int16)
 
-        with wave.open(output_file, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)
-            wf.setframerate(F5_SAMPLE_RATE)
-            wf.writeframes(audio_int16.tobytes())
+        fd, tmp_wav = tempfile.mkstemp(suffix=".wav")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                with wave.open(f, "wb") as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(F5_SAMPLE_RATE)
+                    wf.writeframes(audio_int16.tobytes())
 
-        logger.debug(f"Skipping ID3 tags for WAV output: {output_file}")
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", tmp_wav, "-codec:a", "libmp3lame",
+                 "-b:a", "192k", output_file],
+                capture_output=True, check=True,
+            )
+            logger.debug(f"Converted to MP3: {output_file}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"ffmpeg conversion failed: {e.stderr.decode()}")
+            raise
+        finally:
+            os.unlink(tmp_wav)
 
     def get_break_string(self):
         return "   "
 
     def get_output_file_extension(self):
-        return "wav"
+        return "mp3"
 
     def estimate_cost(self, total_chars):
         return 0.0
