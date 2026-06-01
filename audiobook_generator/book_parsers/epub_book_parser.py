@@ -108,21 +108,4 @@ class EpubBookParser(BaseBookParser):
             soup.decompose()
         return chapters
 
-    def get_search_and_replaces(self):
-        search_and_replaces = []
-        if self.config.search_and_replace_file:
-            with open(self.config.search_and_replace_file) as fp:
-                search_and_replace_content = fp.readlines()
-                for search_and_replace in search_and_replace_content:
-                    if '==' in search_and_replace and not search_and_replace.startswith('==') and not search_and_replace.endswith('==') and not search_and_replace.startswith('#'):
-                        search_and_replaces = search_and_replaces + [ {'search': r"{}".format(search_and_replace.split('==')[0]), 'replace': r"{}".format(search_and_replace.split('==')[1][:-1])} ]
-        return search_and_replaces
-
-    @staticmethod
-    def _sanitize_title(title, break_string) -> str:
-        # replace MAGIC_BREAK_STRING with a blank space
-        # strip incase leading bank is missing
-        title = title.replace(break_string, " ")
-        sanitized_title = re.sub(r"[^\w\s]", "", title, flags=re.UNICODE)
-        sanitized_title = re.sub(r"\s+", "_", sanitized_title.strip())
-        return sanitized_title
+    # get_search_and_replaces and _sanitize_title are inherited from BaseBookParser

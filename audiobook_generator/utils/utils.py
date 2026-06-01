@@ -3,7 +3,6 @@ from typing import List
 import tempfile
 import os
 import io
-from pydub import AudioSegment
 from mutagen.id3._frames import TIT2, TPE1, TALB, TRCK
 from mutagen.id3 import ID3, ID3NoHeaderError
 from typing import List
@@ -208,6 +207,8 @@ def pydub_merge_audio_segments(tmp_files: List[str], output_file: str, output_fo
         output_file: Path to the final output file
         output_format: Audio file format
     """
+    from pydub import AudioSegment
+
     if not tmp_files:
         logger.warning("No temporary files to merge")
         return

@@ -12,6 +12,7 @@ class GeneralConfig:
         self.use_pydub_merge = getattr(args, 'use_pydub_merge', None)
 
         # Book parser specific arguments
+        self.input_format = getattr(args, 'input_format', None)
         self.title_mode = getattr(args, 'title_mode', None)
         self.newline_mode = getattr(args, 'newline_mode', None)
         self.chapter_start = getattr(args, 'chapter_start', None)

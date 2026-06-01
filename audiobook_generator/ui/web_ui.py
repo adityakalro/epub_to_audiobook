@@ -165,7 +165,7 @@ def host_ui(config):
     with gr.Blocks(analytics_enabled=False, title="Epub to Audiobook Converter") as ui:
         with gr.Row(equal_height=True):
             with gr.Column():
-                input_file = gr.File(label="Select the book file to process", file_types=[".epub"], 
+                input_file = gr.File(label="Select the book file to process (.epub or .md)", file_types=[".epub", ".md", ".markdown"], 
                                     file_count="single", interactive=True)
 
             with gr.Column():
